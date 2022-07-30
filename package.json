@@ -1,0 +1,22 @@
+{
+  "name": "proxy-js",
+  "version": "1.0.0",
+  "description": "proxy to reach HA",
+  "main": "carlosproxy.js",
+  "scripts": {
+    "start": "node carlosproxy",
+    "dev": "nodemon carlosproxy"
+  },
+  "author": "Carlos Oliveira",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.1",
+    "express": "^4.18.1",
+    "express-rate-limit": "^6.5.1",
+    "needle": "^3.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.19"
+  }
+}
