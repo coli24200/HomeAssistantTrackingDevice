@@ -6,7 +6,7 @@ var router = express.Router()
 
 
 
-//ENV VARS
+//HOME ASSISTANT URL and Long-Lived Access Tokens to webhook
 var API_HA_URL = process.env.API_HA_URL;
 var API_HA_KEY = process.env.API_HA_KEY;
 //KEYPASS is security passkey (TODO: Base64 encode all data in POST request)
@@ -22,7 +22,18 @@ var xbattery="";
 var xspeed="";
 var xaltitude="";
 
-/// ROUTE only accept a post with some validation, device and key
+
+    // Answer to a browser 
+    router.get('*', async (req, res) => {
+        if(process.env.NODE_ENV != 'production') { 
+            console.log("ALL GETS REJECT");  
+        }       
+        res.status(403).end();
+    });//END OF GET
+
+
+
+    /// ROUTE only accept a post with some validation, device and key
     router.post('/device', async (req, res) => {
         
         try {
@@ -89,7 +100,15 @@ var xaltitude="";
 
 
 
-    });
+    }); // END OF POST
+
+      // Answer to a browser 
+    router.post('*', async (req, res) => {
+        if(process.env.NODE_ENV != 'production') { 
+            console.log("ALL OTHER POSTS REJECT");  
+        }     
+        res.status(403).end();
+    });//END OF GET
     // END OF ROUTE
 
 module.exports = router ;
