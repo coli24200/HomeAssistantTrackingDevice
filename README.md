@@ -1,3 +1,17 @@
+# Homeassistant
+
+create a Long-Lived Access Token
+User/Long-Lived Access Tokens/create token
+
+then use it in webhook 
+<HA_URL>/api/webhook/<token>
+
+Then curl it:
+curl -d "latitude=40.825359&longitude=-9.363611&device=DEVICE&accuracy=10&battery=20&speed=10&altitude=100" -H "Content-Type: application/x-www-form-urlencoded" -X POST https://<HA_URL>/api/webhook/<token>
+
+After the object DEVICE will be created in HA automaticaly and can be used in tracking on HA map
+
+
 # PROXY Server
 Proxy http to HA running in https 
 
@@ -38,3 +52,8 @@ GPS module used:
 + [GPS Module] pin RX  ---> 34 pin [ESP+GSM Module] 
 
 
+
+
+
+# DEV PROTOTYPE
+![Breadboard](/HARDWARE/images/board.png)
