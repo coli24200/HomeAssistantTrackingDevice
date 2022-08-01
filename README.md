@@ -28,9 +28,15 @@ GPS module used:
 
 #Pin connection
 
-[GPS Module] pin VCC ---> 3v3 pin [ESP+GSM Module] 
-[GPS Module] pin GND ---> GND pin [ESP+GSM Module] 
-[GPS Module] pin TX  ---> 35 pin [ESP+GSM Module] 
-[GPS Module] pin RX ---> 34 pin [ESP+GSM Module] 
-
+<span style="color: blue">  
+<br>
+[GPS Module] pin VCC ---> 3v3 pin [ESP+GSM Module]
+<br>
+[GPS Module] pin GND ---> GND pin [ESP+GSM Module]
+<br>
+[GPS Module] pin TX  ---> 35 pin [ESP+GSM Module]
+<br>
+[GPS Module] pin RX  ---> 34 pin [ESP+GSM Module] 
+<br>
+</span>
 
