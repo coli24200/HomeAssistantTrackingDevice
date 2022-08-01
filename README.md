@@ -14,3 +14,5 @@ deploy all these files in your server with Node.js and run;
 
 # HARDWARE:
 
+![GitHub Logo](/images/logo.png)
+Format: ![Alt Text](url)
