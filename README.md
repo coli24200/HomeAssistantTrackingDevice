@@ -6,7 +6,7 @@ User/Long-Lived Access Tokens/create token
 
 Use it in webhook:
 
-<HA_URL>/api/webhook/<token>
+< HA_URL >/api/webhook/< TOKEN >
 
 
 Example of curl:
