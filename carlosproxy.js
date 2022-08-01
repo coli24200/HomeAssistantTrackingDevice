@@ -7,9 +7,9 @@ const helmet = require("helmet");
 var PORT = process.env.PORT || 5000
 var app= express()
 
-// Rate Limits on requests (every 10 minutes can only make 3 requests)
+// Rate Limits on requests (every 5 minutes can only make 3 requests)
 var limiter = rateLimit({
-    windowMs: 10*60*1000,  //10 minutes
+    windowMs: 5*60*1000,  //5 minutes
     max: 3
 })
 app.use(limiter)
