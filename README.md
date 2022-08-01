@@ -14,8 +14,23 @@ deploy all these files in your server with Node.js and run;
 
 # HARDWARE:
 board used: https://github.com/Xinyuan-LilyGO/LilyGo-T-Call-SIM800
-this model: SIM800L IP5306 20190610
+
+ESP32 model used: SIM800L IP5306 20190610
+
 ![ESP+GSM module](/HARDWARE/images/TTGO_T-Call.png)
+
+
 GPS module used:
+
 ![GPS module](/HARDWARE/images/gps.png)
+
+
+
+#Pin connection
+
+[GPS Module] pin VCC ---> 3v3 pin [ESP+GSM Module] 
+[GPS Module] pin GND ---> GND pin [ESP+GSM Module] 
+[GPS Module] pin TX  ---> 35 pin [ESP+GSM Module] 
+[GPS Module] pin RX ---> 34 pin [ESP+GSM Module] 
+
 
