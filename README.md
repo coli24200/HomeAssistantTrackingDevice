@@ -1,13 +1,18 @@
 # Homeassistant
 
-create a Long-Lived Access Token
+Create a Long-Lived Access Token:
+
 User/Long-Lived Access Tokens/create token
 
-then use it in webhook 
+Use it in webhook:
+ 
 <HA_URL>/api/webhook/<token>
 
-Then curl it:
+
+Example of curl:
+
 curl -d "latitude=40.825359&longitude=-9.363611&device=DEVICE&accuracy=10&battery=20&speed=10&altitude=100" -H "Content-Type: application/x-www-form-urlencoded" -X POST https://<HA_URL>/api/webhook/<token>
+
 
 After the object DEVICE will be created in HA automaticaly and can be used in tracking on HA map
 
