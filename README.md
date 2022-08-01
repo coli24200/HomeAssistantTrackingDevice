@@ -13,6 +13,9 @@ deploy all these files in your server with Node.js and run;
 
 
 # HARDWARE:
+board used: https://github.com/Xinyuan-LilyGO/LilyGo-T-Call-SIM800
+this model: SIM800L IP5306 20190610
+![ESP+GSM module](/HARDWARE/images/TTGO_T-Call.png)
+GPS module used:
+![GPS module](/HARDWARE/images/gps.png)
 
-![GitHub Logo](/images/logo.png)
-Format: ![Alt Text](url)
