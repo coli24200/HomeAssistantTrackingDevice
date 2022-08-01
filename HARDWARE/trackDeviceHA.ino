@@ -85,7 +85,7 @@ TinyGsmClient gsmClient(modem,1);
 /*
 0-search for GPS
 1-send grps data
-2-send wifi data
+2-send SMS if device bat too low (TODO)
 3-sleep 
 */
 //init state
