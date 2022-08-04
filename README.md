@@ -54,9 +54,11 @@ GPS module used:
 
 + [GPS Module] pin GND ---> GND pin [ESP+GSM Module]
 
-+ [GPS Module] pin TX  ---> 35 pin [ESP+GSM Module]
++ [GPS Module] pin TX  ---> 33 pin [ESP+GSM Module]
 
-+ [GPS Module] pin RX  ---> 34 pin [ESP+GSM Module] 
++ [GPS Module] pin RX  ---> 32 pin [ESP+GSM Module] 
+
++ [Car Battery] (voltage devider to half of 3v3)----> 14 pin [ESP+GSM Module]
 
 
 
