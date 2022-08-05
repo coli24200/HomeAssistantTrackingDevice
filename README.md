@@ -1,4 +1,5 @@
 # Homeassistant
+Install GPSLogger Webhook on integration tab.
 
 Create a Long-Lived Access Token:
 
