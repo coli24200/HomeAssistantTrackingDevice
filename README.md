@@ -62,8 +62,9 @@ GPS module used:
 
 + [Car Battery] (voltage devider to half of 3v3)----> 14 pin [ESP+GSM Module]
 
++ [Car Battery] (voltage detector on USB 5v to 3v3 voltage devider)----> 12 pin [ESP+GSM Module]
 
-
+REMARK: boths voltage sensors are still to be designed (TODO)
 
 
 # DEV PROTOTYPE
