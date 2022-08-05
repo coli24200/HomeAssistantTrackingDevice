@@ -28,17 +28,27 @@
 #define LED_ON               HIGH
 #define LED_OFF              LOW
 
-// GPS  TODO to connect to a Transistor
+// GPS
 #define GPS_GPIO             18
 #define GPS_ON               HIGH
 #define GPS_OFF              LOW
 
 
-//Car battery level TODO needs a voltage divider, now only detects 3v3 or 0v
+//Car battery level
 #define BATT_CAR_LEVEL       14
+
+
+//Car external power for wake up pin
+#define BATT_CAR             12
 
 //Module battery level
 #define BATT_LEVEL           35
+
+
+
+// battery controller address
+//#define IP5306_ADDR          0x75
+//#define IP5306_REG_SYS_CTL0  0x00
 
 // Set serial for debug console (to Serial Monitor, default speed 115200)
 #define SerialMon Serial
@@ -52,6 +62,11 @@
 */
 static const int RXPin = 32, TXPin = 33;
 static const uint32_t GPSBaud = 9600;
+
+
+// I2C for SIM800 (to keep it running when powered from battery)
+//TwoWire I2CPower = TwoWire(0);
+
 
 
 // The TinyGPSPlus object
@@ -76,31 +91,47 @@ TinyGsmClient gsmClient(modem,1);
 #define uS_TO_S_FACTOR 1000000UL   /* Conversion factor for micro seconds to seconds */
 
 
-//240 seconds Watch Dog Timer to avoid SW hangs with modules
-#define WDT_TIMEOUT 240
 /***********************************************************
-*                  USER SETTINGS                           *
+*         internal USER SETTINGS                           *
 ***********************************************************/
 // TIME TO SLEEP
 #define TIME_TO_SLEEP_BAT  3600    /* Time ESP32 will go to sleep (in seconds) 3600 seconds = 1 hour    , 300 = 5min, 600=10min */
-#define TIME_TO_SLEEP_CAR  120
 // GPS  LOOP to try to find Sats before go to sleep again, avoid battery drain on spots without Sat view
-#define GPS_LOOP       200
+#define GPS_TIME_REQUEST_ON_POWER 120 // time in seconds to wait until next request on Car power (Beware on WDT to be more than this timer)
+//4 minutes Watch Dog Timer to avoid SW hangs
+#define WDT_TIMEOUT 240
+// GPS loop attemps to avoid battery drain 
+#define GPS_LOOP  200
+// GPS attemps after car power shut down 
+#define GPS_ON_BAT  2
+/***********************************************************
+*                                             *
+***********************************************************/
+
+
 // State Machine
 /*
 0-search for GPS
 1-send grps data
-2-send SMS id car battery low, with location
+2-send wifi data
 3-sleep 
 */
 //init state
 volatile int estado=0;
 //init gps loop 
-int gpsLoop=GPS_LOOP;
+int gpsLoop = GPS_LOOP;
 // battery level (Lithium)
 float voltBat=0;
-// battery level car (12v)
+// battery level car 
 float voltBatCar=0;
+// flag to detect car power if needed
+bool batcarflag=false;
+// attempts after car shutdown
+int gpsonbat = GPS_ON_BAT;
+
+/***********************************************************
+*                        Vars                              *
+***********************************************************/
 
 //Init vars
 String latitude="";
@@ -108,7 +139,7 @@ String longitude="";
 String speed="";
 String altitude="";
 String timedate="";
-String batteryLevel="";
+
 
 
 /***********************************************************
@@ -116,29 +147,30 @@ String batteryLevel="";
 ***********************************************************/
 void setup()
 {
+  pinMode( BATT_LEVEL, INPUT) ;
+  pinMode( BATT_CAR_LEVEL, INPUT) ;
+  pinMode( BATT_CAR, INPUT) ;
   //watch dog
   esp_task_wdt_init(WDT_TIMEOUT, true); //enable panic so ESP32 restarts
   esp_task_wdt_add(NULL); //add current thread to WDT watch
+  
+  //wake on voltage from car (Car start , connected to ACC)
+  //Only RTC IO can be used as a source for external wake
+  //pins: 0,2,4,12-15,25-27,32-39.
+  // wake up everytime this pin is with 1 (3v3), does not have RISING function
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_12,1); //1 = High, 0 = Low
   
   
   // Set serial monitor debugging window baud rate to 115200
   SerialMon.begin(115200);
   ss.begin(GPSBaud);
+  SerialMon.println(F("########################## init ##########################")); 
 
-  
+
   Wire.begin(); //NEED to IP5306 lib
-  // Keep power when running from battery , specific to this module version
+  // Keep power when running from battery
   IP5306_SetBoostOutputEnabled(1);
   
-
-  delay(1000);
-  // BAT LEVEL
-  pinMode( BATT_LEVEL, INPUT) ;
-  // BAT CAR
-  pinMode( BATT_CAR_LEVEL, INPUT) ;
-  
-  
- 
   printIP5306Stats();
   SerialMon.println(String("IP5306 KeepOn :") + (IP5306_GetBoostOutputEnabled()?"Enabled":"Disabled"));
   SerialMon.println("Vin Current: "+ String((IP5306_GetVinCurrent() * 100) + 50)+" mA");
@@ -175,7 +207,11 @@ void setup()
   SerialAT.begin(115200, SERIAL_8N1, MODEM_RX, MODEM_TX);
   delay(2000);
 
+  // Restart SIM800 module, it takes quite some time
+  // To skip it, call init() instead of restart()
   SerialMon.println("Initializing modem...");
+  //  modem.restart(); 
+  
   delay(1000);
   modem.init();
   
@@ -240,7 +276,7 @@ void setup()
   SerialMon.println(F("GPS ON"));
   digitalWrite(GPS_GPIO, GPS_ON);
   // Configure the wake up source as timer wake up  
-  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP_CAR * uS_TO_S_FACTOR);
+  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP_BAT * uS_TO_S_FACTOR);
 	
 }
 
@@ -253,7 +289,8 @@ void setup()
 void loop() // run over and over
 { 
   automatoMain();
-  esp_task_wdt_reset(); 
+  esp_task_wdt_reset();
+  
 }
 
 
@@ -266,8 +303,9 @@ void automatoMain() {
   switch(estado) {
 	  case 0:// detect GPS
 		digitalWrite(LED_GPIO, LED_OFF);
-		delay(100); //blink to indicate data read
+		delay(100);
 		digitalWrite(LED_GPIO, LED_ON);
+	   // displays information every time a new sentence is correctly encoded.
 		while (ss.available() > 0){
 			if (gps.encode(ss.read())){
 			    
@@ -298,7 +336,7 @@ void automatoMain() {
 					
 					estado=1;  // to change new state
 				}else{
-				  gpsLoop=gpsLoop-1;	
+				  --gpsLoop;	
 				  SerialMon.println("-GPS NOK-  try# "+String(gpsLoop));
 				  if (gpsLoop==0) 
 					  {
@@ -317,7 +355,8 @@ void automatoMain() {
 	  		
 		break;
 
-	  case 1:// send GSM (GPRS location)	  
+	  case 1:// send GSM (GPRS)	  
+
 		SerialMon.print(F("Connecting to APN: "));
 		SerialMon.println(apn);
 
@@ -368,36 +407,43 @@ void automatoMain() {
 		break;
 
 	  case 2:// STATE TODO SMS WARNING CAR BATT
-	    if (DEBUG){ 
+	    if (DEBUG){ 				
 				SerialMon.println("  VinCurrent: "+ String((IP5306_GetVinCurrent() * 100) + 50)+" mA");
 		 }
 	    estado=3;
 
 		break;
 
-	  case 3:// DEEP SLEEP			
-		printIP5306Stats();	
-		getBatteryVoltage();		
-		//LED OFF
-		digitalWrite(LED_GPIO, LED_OFF);
-		//shutdown GPS
-		digitalWrite(GPS_GPIO, GPS_OFF);
-		//shutdown MODEM
-		digitalWrite(MODEM_POWER_ON, LOW);
-		//ESP DEEP SLEEP
+	  case 3:// DEEP SLEEP or Wait			
+		 
+		getCarBatteryVoltage();
 		
-		if (getCarBatteryVoltage()){
-		 SerialMon.println("#### ESP+GSM to SLEEP: "+String(TIME_TO_SLEEP_CAR)+" Seconds");
-		 esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP_CAR * uS_TO_S_FACTOR);
-		 esp_deep_sleep_start();
+		
+        if(!getPowerSourceCar()){
+		 SerialMon.println("# Powered by module battery, last tries :"+String(gpsonbat)); 
+         --gpsonbat;				 
 		}
-		else{
-		 SerialMon.println("#### ESP+GSM to SLEEP: "+String(TIME_TO_SLEEP_BAT)+" Seconds");
+			
+		if(gpsonbat==0){
+		 printIP5306Stats();	
+		 getBatteryVoltage();		
+		 //LED OFF
+		 digitalWrite(LED_GPIO, LED_OFF);
+		 //shutdown GPS
+		 digitalWrite(GPS_GPIO, GPS_OFF);
+		 //shutdown MODEM
+		 digitalWrite(MODEM_POWER_ON, LOW);
+		 //ESP DEEP SLEEP
+		 // retrive POWER source Car or Bat, pin 12 has it 	
+		 SerialMon.println("#### ESP+GSM to DEEP SLEEP: "+String(TIME_TO_SLEEP_BAT)+" Seconds");
 		 esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP_BAT * uS_TO_S_FACTOR);
 		 esp_deep_sleep_start();
-		}
+		}	
 		
-		estado=0;  //never read , it will wakeup on setup again
+		SerialMon.println("#### ESP+GSM to wait: "+String(GPS_TIME_REQUEST_ON_POWER)+" Seconds");
+		delay(GPS_TIME_REQUEST_ON_POWER*1000);
+		gpsLoop=0;
+		estado=0;  
 		break;		
 
 	  default:	  
@@ -469,10 +515,11 @@ void displayInfo()
 
 
 
-/// UPLOAD DATA TO BUFFER BEFORE POST ///
+/// UPLOAD DATA TO BUFFER BEFORE POST ////
 void make_post(){
 
-  String postdata = "key="+key+"&latitude=" + latitude + "&"+"longitude="+longitude+"&device=Berlingo&accuracy=10&battery="+voltBat+"&speed="+speed+"&altitude=100"+"\r\n";gsmClient.print(String("POST ") + api + " HTTP/1.1\r\n");
+  String postdata = "key="+key+"&latitude=" + latitude + "&"+"longitude="+longitude+"&device=Berlingo&accuracy=10&battery="+voltBat+"v&speed="+speed+"&altitude=100"+"&carbattery="+voltBatCar+"v\r\n";
+  gsmClient.print(String("POST ") + api + " HTTP/1.1\r\n");
   if (DEBUG){SerialMon.println(String("POST ") + api + " HTTP/1.1\r\n");}
   gsmClient.print(String("Host: ") + server + "\r\n");
   if (DEBUG){SerialMon.println(String("Host: ") + server + "\r\n");}
@@ -554,7 +601,30 @@ void printIP5306Stats(){
     SerialMon.println("IP5306: Power Source: "+String(usb?"USB":"BATTERY")+", Battery State: "+String(full?"CHARGED":(usb?"CHARGING":"DISCHARGING"))+", Battery Available: "+String(IP5306_LEDS2PCT(leds))+"\n");
 }
 
-
+// AVOID USING IT , just for IP5306 debug
+void printIP5306Settings(){
+    Serial.println("IP5306 Settings:");
+    Serial.printf("  KeyOff: %s\n", IP5306_GetKeyOffEnabled()?"Enabled":"Disabled");
+    Serial.printf("  BoostOutput: %s\n", IP5306_GetBoostOutputEnabled()?"Enabled":"Disabled");
+    Serial.printf("  PowerOnLoad: %s\n", IP5306_GetPowerOnLoadEnabled()?"Enabled":"Disabled");
+    Serial.printf("  Charger: %s\n", IP5306_GetChargerEnabled()?"Enabled":"Disabled");
+    Serial.printf("  Boost: %s\n", IP5306_GetBoostEnabled()?"Enabled":"Disabled");
+    Serial.printf("  LowBatShutdown: %s\n", IP5306_GetLowBatShutdownEnable()?"Enabled":"Disabled");
+    Serial.printf("  ShortPressBoostSwitch: %s\n", IP5306_GetShortPressBoostSwitchEnable()?"Enabled":"Disabled");
+    Serial.printf("  FlashlightClicks: %s\n", IP5306_GetFlashlightClicks()?"Long Press":"Double Press");
+    Serial.printf("  BoostOffClicks: %s\n", IP5306_GetBoostOffClicks()?"Double Press":"Long Press");
+    Serial.printf("  BoostAfterVin: %s\n", IP5306_GetBoostAfterVin()?"Open":"Not Open");
+    Serial.printf("  LongPressTime: %s\n", IP5306_GetLongPressTime()?"3s":"2s");
+    Serial.printf("  ChargeUnderVoltageLoop: %.2fV\n", 4.45 + (IP5306_GetChargeUnderVoltageLoop() * 0.05));
+    Serial.printf("  ChargeCCLoop: %s\n", IP5306_GetChargeCCLoop()?"Vin":"Bat");
+    Serial.printf("  VinCurrent: %dmA\n", (IP5306_GetVinCurrent() * 100) + 50);
+    Serial.printf("  VoltagePressure: %dmV\n", IP5306_GetVoltagePressure()*14);
+    Serial.printf("  ChargingFullStopVoltage: %u\n", IP5306_GetChargingFullStopVoltage());
+    Serial.printf("  LightLoadShutdownTime: %u\n", IP5306_GetLightLoadShutdownTime());
+    Serial.printf("  EndChargeCurrentDetection: %u\n", IP5306_GetEndChargeCurrentDetection());
+    Serial.printf("  ChargeCutoffVoltage: %u\n", IP5306_GetChargeCutoffVoltage());
+    Serial.println();
+}
 
 //MODULE BAT LEVEL
 void getBatteryVoltage(){  // need finetune does not collect correct value
@@ -565,7 +635,7 @@ void getBatteryVoltage(){  // need finetune does not collect correct value
        SerialMon.println("Battery Voltage= "+String(voltBat)+" Volts");
 
 /*
-Voltage devider with 2x 100KOhm 
+Voltage devider with 2x 100KOhm from T-Call HW
 
 4.2v
 |
@@ -581,18 +651,26 @@ _
 */	   
 }	
 
-// CAR BAT LEVEL
-bool getCarBatteryVoltage(){  // here is reading just 0v<-->3v3  , needs a voltage devider from 12v feed (use isolation)
+// CAR BAT LEVEL 
+float getCarBatteryVoltage(){  // need finetune does not collect correct value
 	   voltBatCar=analogRead(BATT_CAR_LEVEL);// mV
 	   voltBatCar = (voltBatCar * 3.3 ) / (4095);
+	   //voltBat=(voltBat*2.0)/1.155; //adapt
+	   //voltBat=voltBat/1000; //mV to V
 	   SerialMon.println("Car Battery Voltage= "+String(voltBatCar)+" Volts");	
-	   if(voltBatCar>2){
-		   return true;
-	   }
-	   else{
-		   return false;
-	   }	            
-}
+	   return voltBatCar;           
+}   
+
+bool getPowerSourceCar(){
+	  if(analogRead(BATT_CAR)>2){
+		  batcarflag=true;	
+		  SerialMon.println("PowerSource Connected to car battery");
+	  }else{ 
+	      batcarflag=false;
+		  SerialMon.println("PowerSource Connected to module battery ");
+	  }
+      return batcarflag ;
+}	
 
 
 

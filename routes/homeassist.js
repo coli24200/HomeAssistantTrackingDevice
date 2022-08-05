@@ -21,6 +21,7 @@ var xaccuracy="";
 var xbattery="";
 var xspeed="";
 var xaltitude="";
+var xcarbattery="";
 
 
     // Answer to a browser 
@@ -55,8 +56,9 @@ var xaltitude="";
                     xbattery=req.body.battery;
                     xspeed=req.body.speed;
                     xaltitude=req.body.altitude;
+                    xcarbattery=req.body.carbattery;
                     if(process.env.NODE_ENV != 'production') {
-                        console.log("All vars set",xlatitude,xlongitude,xaccuracy,xbattery,xspeed,xaltitude);
+                        console.log("All vars set",xlatitude,xlongitude,xaccuracy,xbattery,xspeed,xaltitude,xcarbattery);
                     }
 
                     success=true;
@@ -72,7 +74,7 @@ var xaltitude="";
 
                 var url=String(API_HA_URL+API_HA_KEY);
                 var data=String('latitude='+xlatitude+'&longitude='+xlongitude+'&device='+XDEVICE
-                +'&accuracy='+xaccuracy+'&battery='+xbattery+'&speed='+xspeed+'&altitude='+xaltitude);
+                +'&accuracy='+xaccuracy+'&battery='+xbattery+'&speed='+xspeed+'&altitude='+xaltitude+'&provider='+xcarbattery);
 
 
                 if(process.env.NODE_ENV != 'production') { 
