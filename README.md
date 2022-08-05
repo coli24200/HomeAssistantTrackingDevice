@@ -17,7 +17,7 @@ curl -d "latitude=40.825359&longitude=-9.363611&device=DEVICE&accuracy=10&batter
 ```
 
 
-After the object DEVICE will be created in HA automaticaly and can be used in tracking on HA map
+After the entity DEVICE will be created in HA automaticaly and can be used in tracking on HA map
 
 
 # PROXY Server
