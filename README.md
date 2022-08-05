@@ -17,7 +17,7 @@ curl -d "latitude=40.825359&longitude=-9.363611&device=DEVICE&accuracy=10&batter
 ```
 
 
-After the object DEVICE will be created in HA automaticaly and can be used in tracking on HA map
+After the entity DEVICE will be created in HA automaticaly and can be used in tracking on HA map
 
 
 # PROXY Server
@@ -35,6 +35,7 @@ deploy all these files in your server with Node.js and run;
 
 
 # HARDWARE:
+Instead of using Android device we will use an Arduino/ESP hardware to do the logging via HTTP POST.
 board used: https://github.com/Xinyuan-LilyGO/LilyGo-T-Call-SIM800
 
 ESP32 model used: SIM800L IP5306 20190610
