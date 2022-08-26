@@ -30,7 +30,7 @@ This proxy server runs in Node.JS and redirect a request on a specific port (e.g
 Server protected with NPM Helmet, Supervisor and Express-rate-limit 
 
 deploy all these files in your server with Node.js and run;
-
+> npm install
 > npm run prod
 
 
